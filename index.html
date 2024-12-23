@@ -101,17 +101,14 @@
 
     function handleCellClick(row, col) {
       if (board[row][col] === 'white') {
-        alert(`Player ${currentPlayer}, you can't select this tile again!`);
-        return;
+        board[row][col] = null; // Turn back to blue
+      } else {
+        board[row][col] = 'white'; // Turn white
       }
-
-      board[row][col] = 'white'; // Turn the tile white
       renderBoard();
-
       if (checkWinOrLoss(row, col)) {
         return;
       }
-
       switchPlayer();
     }
 
