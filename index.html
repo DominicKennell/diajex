@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Diajex Multiplayer</title>
+  <title>Diajex</title>
   <style>
     body {
       font-family: Arial, sans-serif;
@@ -65,7 +65,7 @@
   </style>
 </head>
 <body>
-  <h1>Diajex Multiplayer</h1>
+  <h1>Diajex</h1>
   <div class="info">Player <span id="current-player">1</span>'s turn</div>
   <div class="board" id="board"></div>
   <button class="btn" id="restart-btn">Restart Game</button>
@@ -79,20 +79,13 @@
     let board = [];
     let currentPlayer = 1;
 
-    // Connect to WebSocket server (replace with your WebSocket server URL)
-    const socket = new WebSocket('ws://your-websocket-server-url'); 
+    function initBoard() {
+      board = Array.from({ length: BOARD_SIZE }, () => Array(BOARD_SIZE).fill(null));
+      renderBoard();
+    }
 
-    socket.onmessage = function (event) {
-      const data = JSON.parse(event.data);
-      board = data.board;
-      currentPlayer = data.currentPlayer;
-      updateBoard();
-      currentPlayerElement.textContent = currentPlayer;
-    };
-
-    // Create and update the board
-    function updateBoard() {
-      boardElement.innerHTML = ''; // Clear the board
+    function renderBoard() {
+      boardElement.innerHTML = '';
       board.forEach((row, rowIndex) => {
         row.forEach((cell, colIndex) => {
           const cellElement = document.createElement('div');
@@ -106,30 +99,78 @@
       });
     }
 
-    // Handle click on a cell
     function handleCellClick(row, col) {
       if (board[row][col] === 'white') {
         alert(`Player ${currentPlayer}, you can't select this tile again!`);
         return;
       }
 
-      // Send the move to the WebSocket server
-      socket.send(JSON.stringify({ type: 'move', row, col, player: currentPlayer }));
+      board[row][col] = 'white'; // Turn the tile white
+      renderBoard();
+
+      if (checkWinOrLoss(row, col)) {
+        return;
+      }
+
+      switchPlayer();
     }
 
-    // Listen for restart button click
-    restartButton.addEventListener('click', () => {
-      socket.send(JSON.stringify({ type: 'restart' }));
-    });
+    function switchPlayer() {
+      currentPlayer = currentPlayer === 1 ? 2 : 1;
+      currentPlayerElement.textContent = currentPlayer;
+    }
 
-    // Initialize the board when connection is established
-    socket.onopen = function () {
-      console.log('Connected to WebSocket server');
-      // Initialize the game state for the first time
-      board = Array.from({ length: BOARD_SIZE }, () => Array(BOARD_SIZE).fill(null));
-      updateBoard();
-    };
+    function checkWinOrLoss(row, col) {
+      if (checkLine(row, col, 1, 0) || checkLine(row, col, 0, 1) || checkLine(row, col, 1, 1) || checkLine(row, col, 1, -1)) {
+        return true;
+      }
+      return false;
+    }
 
+    function checkLine(row, col, rowDelta, colDelta) {
+      let count = 1;
+
+      // Check in one direction
+      count += countTiles(row, col, rowDelta, colDelta);
+      // Check in the opposite direction
+      count += countTiles(row, col, -rowDelta, -colDelta);
+
+      if (count === 4) {
+        alert(`Player ${currentPlayer} wins!`);
+        restartGame();
+        return true;
+      } else if (count >= 5) {
+        alert(`Player ${currentPlayer} loses by making 5 in a row!`);
+        restartGame();
+        return true;
+      }
+      return false;
+    }
+
+    function countTiles(row, col, rowDelta, colDelta) {
+      let count = 0;
+      let r = row + rowDelta;
+      let c = col + colDelta;
+
+      while (r >= 0 && r < BOARD_SIZE && c >= 0 && c < BOARD_SIZE && board[r][c] === 'white') {
+        count++;
+        r += rowDelta;
+        c += colDelta;
+      }
+
+      return count;
+    }
+
+    function restartGame() {
+      currentPlayer = 1;
+      currentPlayerElement.textContent = currentPlayer;
+      initBoard();
+    }
+
+    restartButton.addEventListener('click', restartGame);
+
+    // Initialize the game
+    initBoard();
   </script>
 </body>
 </html>
